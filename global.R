@@ -236,7 +236,8 @@ pltFx <-
     
     ggplot(d) +
       aes(y = .data[[vr]], x = `School Year`) +
-      facet_grid(cols = vars(LEA), rows = vars(`Grade Level`)) +
+      facet_grid(#rows = vars(`Grade Level`),
+                 cols = vars(LEA)) +
       geom_line(aes(linetype = hst, color = .data[[ttl]]), show.legend = T, linewidth = 2) +
       geom_point(aes(color = .data[[ttl]]), show.legend = T, size = 4) +
       geom_label_repel(aes(label = ifelse(round(.data[[vr]], rnd) < 15 & vr %in% protected, 

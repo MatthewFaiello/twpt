@@ -31,22 +31,22 @@ shinyServer(
                              min = 0.0, max = 100.0, step = 0.1, icon = icon("percent"))
       
       updateNumericInputIcon(inputId = "STsped", 
-                             label = "Students per Teacher (SPED)", 
+                             label = "Students per Teacher (Special Education)", 
                              value = round(dat$`Students per Teacher (SPED)`, 1), 
                              min = 0.0, max = 100.0, step = 0.1, icon = icon("user"))
       
       updateNumericInputIcon(inputId = "STgen", 
-                             label = "Students per Teacher (non-SPED)", 
+                             label = "Students per Teacher  (Non-Special Education)", 
                              value = round(dat$`Students per Teacher (Non-SPED)`, 1), 
                              min = 0.0, max = 100.0, step = 0.1, icon = icon("user"))
       
       updateNumericInputIcon(inputId = "RRsped", 
-                             label = "Teacher Retention Rate (SPED)", 
+                             label = "Teacher Retention Rate  (Special Education)", 
                              value = round((dat$`Teacher Retention Rate (SPED)` * 100), 1), 
                              min = 0.0, max = 100.0, step = 0.1, icon = icon("percent"))
       
       updateNumericInputIcon(inputId = "RRgen", 
-                             label = "Teacher Retention Rate (non-SPED)", 
+                             label = "Teacher Retention Rate (Non-Special Education)", 
                              value = round((dat$`Teacher Retention Rate (Non-SPED)` * 100), 1), 
                              min = 0.0, max = 100.0, step = 0.1, icon = icon("percent"))})
     
@@ -215,9 +215,9 @@ shinyServer(
                      y = mean(c(mxD, mxR)),
                      label = paste(gap, "Teachers")) +
             labs(color = paste0(ttl, ": "),
-                 caption = title_txt) +
-            theme(plot.caption.position = "plot",
-                  plot.caption = element_text(size = 17, face = "bold", hjust = 0.5))
+                 title = title_txt) +
+            theme(plot.title.position = "plot",
+                  plot.title = element_text(size = 19, face = "bold", hjust = 0.5))
                     
           
         } else {
@@ -385,70 +385,120 @@ shinyServer(
         #output
         datatable(datHist,
                   filter = "none",
-                  extensions = c('Buttons'), 
-                  rownames = F, 
-                  options = list(dom = 'Bd',
-                                 buttons = c('excel'),
-                                 lengthMenu = list(c(-1),
-                                                   c("ALL")))) -> dt
+                  extensions = "Buttons",
+                  rownames = FALSE,
+                  class = "compact stripe hover",
+                  options = list(dom = "Brti",
+                                 buttons = list(list(extend = "excel", 
+                                                     text = "Export Data")),
+                    scrollX = TRUE,
+                    autoWidth = TRUE,
+                    pageLength = nrow(datHist),
+                    columnDefs = list(list(className = "dt-nowrap", targets = "_all")))) -> dt
         
         return(dt)})
     
     
     #panel 2 ##################################################################
     #------------------table
-    output$hires <- 
-      renderUI({
-        
-        vr <- str_extract(input$PLT, "(?<=\\().*?(?=\\))")
-        
-        if (input$PLT %in% c("Population (5-18 yrs)", "Enrollment")) {vr <- "Total"}
-        if (input$PLT == "Students with an IEP") {vr <- "SPED"}
-        
-        dmnd <- demand_data()
-        
-        tmp0 <-
-          dmnd %>%
-          filter(`School Year` >= min(data$`School Year`) & `School Year` <= yr) 
-        
-        tmp1 <-
-          tmp0 %>% 
-          arrange(`School Year`) %>% 
-          mutate(`Teacher New Hires (Total)` = `Teacher New Hires (SPED)` + `Teacher New Hires (Non-SPED)`,
-                 `Teacher Transfer Hires (Total)` = `Teacher Transfer Hires (SPED)` + `Teacher Transfer Hires (Non-SPED)`) %>%
-          pivot_longer(contains("Hires")) %>% 
-          mutate(grp = str_extract(name, "(?<=\\().*?(?=\\))"),
-                 `Staffing Pool` = str_remove(name, " \\(.*?\\)"),
-                 `Staffing Pool` = str_remove(`Staffing Pool`, "Teacher "),
-                 `School Year` = paste0(`School Year` - 1, "-", `School Year` - 2000)) %>% 
-          filter(grp == vr) %>% 
-          pivot_wider(id_cols = c(`School Year`:`Grade Level`, `Staffing Pool`), 
-                      names_from = grp,
-                      values_from = value) %>% 
-          pivot_wider(names_from = `School Year`, values_from = all_of(vr))
-        
-        gl <- unique(tmp1$`Grade Level`)
-        
-        tmp2 <- 
-          tmp1 %>% 
-          select(-c(County:`Grade Level`)) %>% 
-          adorn_totals()
-        
-        c <- ncol(tmp2)
-        hd <- tibble(names = c(" ", input$LEA),
-                     colspan = c(1, (c - 1)))
-        
-        #output
-        tmp2 %>% 
-          kable(escape = F, align = c("r", rep("c", c))) %>%
-          kable_styling("striped", full_width = F) %>% 
-          group_rows(paste0(vr, " - ", gl), 1, nrow(tmp1), bold = F, italic = T) %>% 
-          column_spec(1, bold = T, border_right = T, width_min = '1.65in') %>%
-          column_spec(2:c, width_min = '1.1in') %>%
-          row_spec(3, bold = T, extra_css = "border-top: 1px solid;") %>% 
-          add_header_above(header = hd) -> t
-        
-        div(style = "overflow-x: auto; width: 100%;", HTML(as.character(t)))})
+    output$hires <- DT::renderDT({
+      
+      vr <- stringr::str_extract(input$PLT, "(?<=\\().*?(?=\\))")
+      
+      if (input$PLT %in% c("Population (5-18 yrs)", "Enrollment")) vr <- "Total"
+      if (input$PLT == "Students with an IEP") vr <- "SPED"
+      
+      dmnd <- demand_data()
+      
+      tmp0 <-
+        dmnd %>%
+        dplyr::filter(`School Year` <= yr)
+      
+      tmp1 <-
+        tmp0 %>%
+        dplyr::arrange(desc(`School Year`)) %>%
+        dplyr::mutate(
+          `Teacher New Hires (Total)` = `Teacher New Hires (SPED)` + `Teacher New Hires (Non-SPED)`,
+          `Teacher Transfer Hires (Total)` = `Teacher Transfer Hires (SPED)` + `Teacher Transfer Hires (Non-SPED)`
+        ) %>%
+        tidyr::pivot_longer(dplyr::contains("Hires")) %>%
+        dplyr::mutate(
+          grp = stringr::str_extract(name, "(?<=\\().*?(?=\\))"),
+          `Staffing Pool` = stringr::str_remove(name, "Teacher "),
+          `School Year` = paste0(`School Year` - 1, "-", `School Year` - 2000)
+        ) %>%
+        dplyr::filter(grp == vr) %>%
+        tidyr::pivot_wider(
+          id_cols = c(`School Year`:`Grade Level`, `Staffing Pool`),
+          names_from = grp,
+          values_from = value
+        ) %>%
+        tidyr::pivot_wider(
+          names_from = `School Year`,
+          values_from = dplyr::all_of(vr)
+        )
+      
+      tmp2 <-
+        tmp1 %>%
+        dplyr::select(-County:-`Grade Level`) %>%
+        janitor::adorn_totals(name = paste0("All Hires (", vr, ")"))
+      
+      names(tmp2)[1] <- "Staffing Pool"
+      
+      year_cols <- names(tmp2)[-1]
+      
+      n_rows <- nrow(tmp2)
+      scroll_height <- min(max(n_rows * 38, 120), 240)
+      scroll_height <- paste0(scroll_height, "px")
+      
+      DT::datatable(
+        tmp2,
+        rownames = FALSE,
+        class = "compact stripe hover nowrap",
+        options = list(
+          dom = "t",
+          paging = FALSE,
+          searching = FALSE,
+          ordering = FALSE,
+          info = FALSE,
+          autoWidth = TRUE,
+          scrollX = TRUE,
+          scrollY = scroll_height,
+          scrollCollapse = TRUE,
+          columnDefs = list(
+            list(className = "dt-left", targets = 0),
+            list(className = "dt-center", targets = seq_along(year_cols))
+          )
+        ),
+        callback = DT::JS("
+      table.on('init.dt', function() {
+        setTimeout(function() {
+          table.columns.adjust().draw(false);
+        }, 100);
+      });
+
+      $(document).on('shown.bs.collapse', function() {
+        $.fn.dataTable
+          .tables({ visible: true, api: true })
+          .columns.adjust()
+          .draw(false);
+      });
+
+      $(window).on('resize', function() {
+        $.fn.dataTable
+          .tables({ visible: true, api: true })
+          .columns.adjust()
+          .draw(false);
+      });
+    ")
+      ) %>%
+        DT::formatStyle(
+          "Staffing Pool",
+          fontWeight = "700",
+          backgroundColor = "#fcfdff"
+        )
+      
+    }, server = FALSE)
     
   })
 
