@@ -1,6 +1,6 @@
 # Teacher Workforce Planning Tool (TWPT)
 
-The Teacher Workforce Planning Tool is a Shiny app for exploring long-term teacher workforce projections in Delaware. It helps users examine how changes in enrollment, student need, staffing ratios, and retention may affect projected teacher demand, retained teachers, and hiring need.
+TWPT is a Shiny app for exploring long-term teacher workforce projections in Delaware. It helps users examine how changes in enrollment, student need, staffing ratios, and teacher retention may affect projected teacher demand, retained teachers, and hiring need.
 
 ## Live app
 
@@ -12,14 +12,9 @@ TWPT allows users to:
 
 - select an LEA, county, or statewide view
 - choose a projected school year
-- adjust planning targets for:
-  - matriculation rate
-  - IEP identification rate
-  - students per teacher (special education and non-special education)
-  - teacher retention rate (special education and non-special education)
-- view projected teacher demand, retained teachers, and hiring need
-- review historical planning target trends
-- download forecast outputs and supporting data
+- adjust planning targets for matriculation, IEP identification, students per teacher, and teacher retention
+- view projected demand, retained teachers, and hiring need
+- review planning target trends and downloadable data outputs
 
 ## Data sources
 
@@ -31,21 +26,15 @@ The app uses preprocessed Delaware education and population data, including:
 
 ## Project structure
 
-- `global.R` – packages, data loading, and forecasting/helper functions
-- `ui.R` – app layout and controls
+- `global.R` – package imports, data loading, and forecasting/helper functions
+- `ui.R` – app interface
 - `server.R` – reactive logic, plots, tables, and downloads
-- `preprocessed_data.rds` – preprocessed data used by the app
+- `preprocessed_data.rds` – preprocessed app data
 - `www/` – static assets
 
 ## Run locally
 
-1. Clone this repository.
-2. Open the project in RStudio.
-3. Install required packages.
-4. Make sure `preprocessed_data.rds` is in the project root.
-5. Run the app.
-
-Example:
+Open the project in RStudio, or set your working directory to the repository root. Install the required packages, make sure `preprocessed_data.rds` is in the project root, then run:
 
 ```r
 install.packages(c(
