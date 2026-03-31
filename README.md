@@ -6,6 +6,10 @@ TWPT is a Shiny app for exploring long-term teacher workforce projections in Del
 
 https://mattfaiello.shinyapps.io/TWPT/
 
+## Intended use
+
+TWPT is a planning and scenario-testing tool, not a precise prediction engine. Results should be interpreted alongside local context, policy changes, and workforce conditions.
+
 ## What the app does
 
 TWPT allows users to:
@@ -41,10 +45,6 @@ install.packages(c(
   "shiny", "shinyWidgets", "tidyverse", "knitr", "kableExtra", "DT",
   "ggthemes", "ggfun", "ggrepel", "bslib", "janitor", "shinyjs",
   "bsicons", "webshot2", "pagedown", "chromote", "curl", "magick",
-
-## Notes
-
-TWPT is a planning and scenario-testing tool, not a precise prediction engine. Results should be interpreted alongside local context, policy changes, and workforce conditions.
   "shinycssloaders"
 ))
 
