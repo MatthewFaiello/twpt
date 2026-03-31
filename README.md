@@ -41,6 +41,10 @@ install.packages(c(
   "shiny", "shinyWidgets", "tidyverse", "knitr", "kableExtra", "DT",
   "ggthemes", "ggfun", "ggrepel", "bslib", "janitor", "shinyjs",
   "bsicons", "webshot2", "pagedown", "chromote", "curl", "magick",
+
+## Notes
+
+TWPT is a planning and scenario-testing tool, not a precise prediction engine. Results should be interpreted alongside local context, policy changes, and workforce conditions.
   "shinycssloaders"
 ))
 
