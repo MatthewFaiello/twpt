@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # prep folder; source data and data prep scripts
 prep/
 
@@ -38,3 +39,9 @@ Thumbs.db
 !*.rds
 !*.RDS
 .positai
+=======
+rsconnect/
+prep/
+.Rproj.user
+.Rhistory
+>>>>>>> c5dd165e0015d262bff52b2e94521a1953ef2c55
