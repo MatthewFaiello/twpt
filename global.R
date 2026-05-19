@@ -1,27 +1,24 @@
 #--------------------------- global ------------------------------------------#
+# This file loads packages, app data, and helper functions used by ui.R and server.R.
+
 library(shiny)
 library(shinyWidgets)
 library(tidyverse)
-library(knitr)
-library(kableExtra)
 library(DT)
 library(ggthemes)
 library(ggfun)
 library(ggrepel)
 library(bslib)
 library(janitor)
-library(shinyjs)
 library(bsicons)
-library(webshot2)
-library(pagedown)
-library(chromote)
-library(curl)
-library(magick)
 library(shinycssloaders)
+library(zip)
+library(grid)
 
 
 #------------------global options
-options(shiny.sanitize.errors = T)
+options(shiny.sanitize.errors = TRUE)
+options(scipen = 9999)
 
 
 ###############################################################################
@@ -46,9 +43,21 @@ metricList <- preprocessed$metricList
 
 dfltVls <- preprocessed$dfltVls
 
-#for testing
-#input <- tibble(LEA = "Appoquinimink School District", SchoolYear = 2034, Mat = 15.1, IEP = 16.9, STsped = 8.1, STgen = 16.2, RRsped = 89.9, RRgen = 90.3, PLT = "Hiring Need (Total)")
-#data <- data %>% filter(LEA == input$LEA)
+
+#--------------------------- small helper functions --------------------------#
+# Keep short, reusable helper functions here so server.R stays easier to read.
+
+make_safe_name <- function(x) {
+  x <- gsub("[^A-Za-z0-9]+", "_", x)
+  x <- gsub("^_|_$", "", x)
+  return(x)
+}
+
+make_school_year_label <- function(school_year) {
+  school_year <- as.integer(school_year)
+  return(sprintf("%d-%02d", school_year - 1, school_year %% 100))
+}
+
 
 
 #--------------------growth model function------------------------------------#
@@ -102,8 +111,6 @@ cagrf <-
     #output
     return(tmp)}
 
-#for testing
-#prcntNcrs <- cagrf(d = data, begin = yr, end_ = input$SchoolYear, mat_ = input$Mat, iep_ = input$IEP, STsped_ = input$STsped, STgen_ = input$STgen, RRsped_ = input$RRsped, RRgen_ = input$RRgen)
 
 
 #--------------------prediction model function--------------------------------#
@@ -161,8 +168,6 @@ predict_model <-
     #output
     return(output)}
 
-#for testing
-#predCAGR <- predict_model(d = data, rate = prcntNcrs, begin = yr, end = input$SchoolYear)
 
 
 #--------------------demand model function------------------------------------#
@@ -216,8 +221,6 @@ demand <-
     #output
     return(tmp)}
 
-#for testing
-#full <- demand(d = bind_rows(predCAGR, data %>% filter(`School Year` <= yr)))
 
 
 #----------------------plot model function------------------------------------#
@@ -257,7 +260,7 @@ pltFx <-
                        min.segment.length = 0,
                        segment.size = 1,          
                        segment.color = "black",     
-                       arrow = arrow(length = unit(0.02, "npc"), type = "closed"), 
+                       arrow = grid::arrow(length = grid::unit(0.02, "npc"), type = "closed"), 
                        fill = "#194a78",        
                        color = "white",             
                        label.size = 0.25,
@@ -297,12 +300,3 @@ pltFx <-
              linetype = "none") -> tmp
     
     return(tmp)}
-
-
-
-
-
-
-
-
-

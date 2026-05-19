@@ -1,17 +1,10 @@
 #--------------------------- ui ----------------------------------------------#
+# This file defines the app layout. Most app logic lives in server.R.
 
 ui <- page_sidebar(
   window_title = "Teacher Workforce Planning Tool",
   fillable = TRUE,
   fillable_mobile = TRUE,
-  
-  useShinyjs(),
-  
-  tags$script(HTML("
-    $(document).on('click', '#plot1Export', function () {
-      Shiny.setInputValue('download_clicked', Math.random());
-    });
-  ")),
   
   tags$head(
     tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
@@ -63,7 +56,7 @@ ui <- page_sidebar(
           inputId = "SchoolYear",
           label = "Projected School Year",
           choices = schoolYears,
-          selected = paste0(yr - 1, "-", yr - 2000),
+          selected = paste0(yr, "-", yr - 2001),
           multiple = FALSE,
           options = pickerOptions(
             `actions-box` = FALSE,

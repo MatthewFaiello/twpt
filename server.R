@@ -1,18 +1,6 @@
 #--------------------------- server ------------------------------------------#
-shinyServer(
-  function(input, output, session) {
-    
-    #---------------------fix downloader
-    message(curl::curl_version())
-    if (identical(Sys.getenv("R_CONFIG_ACTIVE"), "shinyapps")) {
-      chromote::set_default_chromote_object(
-        chromote::Chromote$new(chromote::Chrome$new(
-          args = c("--disable-gpu", 
-                   "--no-sandbox", 
-                   "--disable-dev-shm-usage", 
-                   c("--force-color-profile", "srgb")))))}
-    
-    
+# This file contains the app logic in the same order as the UI tabs.
+server <- function(input, output, session) {
     #-------------------update inputs
     observeEvent(input$LEA, {
       dat <- 
@@ -228,53 +216,130 @@ shinyServer(
     output$plot <- renderPlot({plot1Fx()})
     
     
-    #------------------plot download
-    output$plot1Export <- 
-      downloadHandler(filename = function() {
+    #------------------download forecast chart and assumptions
+    output$plot1Export <- downloadHandler(
+      filename = function() {
+        req(input$LEA, input$SchoolYear)
+        safe_lea <- make_safe_name(input$LEA)
+        timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+        paste0("TWPT_", safe_lea, "_", input$SchoolYear, "_", timestamp, ".zip")
+      },
+      
+      contentType = "application/zip",
+      
+      content = function(file) {
+        req(input$LEA, input$SchoolYear, input$PLT)
+        vals <- req(debouncedVals())
         
-        safe_lea <- gsub("[^a-zA-Z0-9]", "_", input$LEA)
-        timestamp <- format(Sys.time(), "%m-%d-%Y", tz = "UTC")
-        paste0("TWPT_", safe_lea, "_", input$SchoolYear, "_", timestamp, ".zip")},
+        note_id <- showNotification(
+          "Preparing your download...",
+          type = "message",
+          duration = NULL,
+          closeButton = FALSE,
+          session = session
+        )
         
-        content = function(file) {
-          tmpdir <- tempdir()
-          timestamp <- format(Sys.time(), "%m-%d-%Y", tz = "UTC")
-          safe_lea <- gsub("[^a-zA-Z0-9]", "_", input$LEA)
-          year <- input$SchoolYear
+        download_ok <- FALSE
+        on.exit({
+          removeNotification(note_id, session = session)
           
-          plot_file <- file.path(tmpdir, paste0("plot_", safe_lea, "_", year, "_", timestamp, ".png"))
-          inputs_file <- file.path(tmpdir, paste0("inputs_", safe_lea, "_", year, "_", timestamp, ".png"))
-          
-          z <- 1
-          png(file = plot_file, width = 4000, height = 2100, units = "px", pointsize = 10, res = 300)
-          print(plot1Fx() +
-                  theme(legend.title = element_text(face = "bold", size = 17 * z, hjust = 0.5),
-                        strip.text.x = element_text(face = "bold", size = 17 * z, color = "white"),
-                        strip.text.y = element_text(face = "bold", size = 17 * z, color = "white", angle = 270),
-                        axis.text.y = element_text(face = "bold", size = 12 * z),
-                        axis.text.x = element_text(face = "bold", size = 12 * z),
-                        legend.text = element_text(face = "bold", size = 17 * z)))
-          dev.off()
-          
-          vals <- debouncedVals()
-          
-          tibble("LEA" = list(unique(input$LEA)),
-                 "School Year" = list(unique(input$SchoolYear)),
-                 "Matriculation Rate" = list(vals$Mat),
-                 "IEP Identification Rate" = list(vals$IEP),
-                 "Students per Teacher (SPED)" = list(vals$STsped),
-                 "Students per Teacher (Non-SPED)" = list(vals$STgen),
-                 "Teacher Retention Rate (SPED)" = list(vals$RRsped),
-                 "Teacher Retention Rate (Non-SPED)" = list(vals$RRgen)) %>%
-            kable() %>%
-            kable_styling() %>%
-            save_kable(file = inputs_file, zoom = 2)
-          
-          zip::zip(zipfile = file,
-                   files = c(plot_file, inputs_file),
-                   mode = "cherry-pick")})
-    
-    observeEvent(input$download_clicked, {showNotification("Preparing your download...", type = "message", duration = 3)})
+          if (download_ok) {
+            showNotification(
+              "Download ready. Check your downloads folder.",
+              type = "message",
+              duration = 5,
+              session = session
+            )
+          } else {
+            showNotification(
+              "Download failed. Please try again or contact Matt if this keeps happening.",
+              type = "error",
+              duration = 8,
+              session = session
+            )
+          }
+        }, add = TRUE)
+        
+        year <- as.integer(input$SchoolYear)
+        school_year_label <- make_school_year_label(year)
+        timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+        safe_lea <- make_safe_name(input$LEA)
+        
+        export_dir <- tempfile("twpt_download_")
+        dir.create(export_dir, recursive = TRUE, showWarnings = FALSE)
+        on.exit(unlink(export_dir, recursive = TRUE, force = TRUE), add = TRUE)
+        
+        plot_file <- file.path(
+          export_dir,
+          paste0("forecast_chart_", safe_lea, "_", year, "_", timestamp, ".png")
+        )
+        
+        inputs_file <- file.path(
+          export_dir,
+          paste0("planning_targets_", safe_lea, "_", year, "_", timestamp, ".csv")
+        )
+        
+        readme_file <- file.path(
+          export_dir,
+          paste0("read_me_", safe_lea, "_", year, "_", timestamp, ".txt")
+        )
+        
+        # Save the current forecast chart.
+        ggplot2::ggsave(
+          filename = plot_file,
+          plot = plot1Fx(),
+          width = 13.33,
+          height = 7,
+          units = "in",
+          dpi = 300,
+          bg = "white",
+          device = "png"
+        )
+        
+        # Save the planning targets as a simple CSV.
+        planning_targets <- tibble::tibble(
+          `LEA or Grouping` = input$LEA,
+          `Projected School Year` = school_year_label,
+          `Projected Measure` = input$PLT,
+          `Matriculation Rate (%)` = vals$Mat,
+          `IEP Identification Rate (%)` = vals$IEP,
+          `Students per Teacher (SPED)` = vals$STsped,
+          `Students per Teacher (Non-SPED)` = vals$STgen,
+          `Teacher Retention Rate (SPED) (%)` = vals$RRsped,
+          `Teacher Retention Rate (Non-SPED) (%)` = vals$RRgen
+        )
+        
+        readr::write_csv(planning_targets, inputs_file, na = "")
+        
+        # Save a short plain-language note for the ZIP file.
+        readr::write_lines(
+          c(
+            "Teacher Workforce Planning Tool download",
+            "",
+            paste0("LEA or Grouping: ", input$LEA),
+            paste0("Projected School Year: ", school_year_label),
+            paste0("Projected Measure: ", input$PLT),
+            "",
+            "Files included:",
+            "- forecast_chart: PNG image of the current forecast chart",
+            "- planning_targets: CSV file with the assumptions used to create the forecast",
+            "",
+            "Note: TWPT provides planning estimates based on historical data and selected assumptions. Results should be interpreted alongside local context, policy changes, and workforce conditions."
+          ),
+          readme_file
+        )
+        
+        # Create the ZIP file returned by the download button.
+        zip::zipr(
+          zipfile = file,
+          files = list.files(export_dir),
+          root = export_dir,
+          include_directories = FALSE
+        )
+        
+        download_ok <- TRUE
+      }
+    )
     
     
     #card 2 ##################################################################
@@ -499,15 +564,4 @@ shinyServer(
         )
       
     }, server = FALSE)
-    
-  })
-
-
-
-
-
-
-
-
-
-
+}
